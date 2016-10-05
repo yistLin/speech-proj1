@@ -24,6 +24,8 @@ compute-mfcc-feats --verbose=2 $options scp:material/$target.wav.scp ark,t,scp:$
 # TODO: 
 #	1. use add-deltas to add delta features to original mfcc feature set
 #	2. use compute-cmvn-stats & apply-cmvn to compute cmvn statistics and apply cmvn with global means and variatnces to previous 39-dim mfcc feature set
+add-deltas --delta-order=2 ark:$path/$target.13.ark ark,t:$path/$target.13.delta.ark
+compute-cmvn-stats ark:$path/$target.13.delta.ark ark:- | apply-cmvn ark:- ark:$path/$target.13.delta.ark ark:$path/$target.39.cmvn.ark 2> $log
 
 echo "Extracting dev set"
 target=dev
@@ -32,6 +34,8 @@ compute-mfcc-feats --verbose=2 $options scp:material/$target.wav.scp ark,t,scp:$
 # TODO: 
 #	1. use add-deltas to add delta features to original mfcc feature set
 #	2. use compute-cmvn-stats & apply-cmvn to compute cmvn statistics and apply cmvn with global means and variatnces to previous 39-dim mfcc feature set
+add-deltas --delta-order=2 ark:$path/$target.13.ark ark,t:$path/$target.13.delta.ark
+compute-cmvn-stats ark:$path/$target.13.delta.ark ark:- | apply-cmvn ark:- ark:$path/$target.13.delta.ark ark:$path/$target.39.cmvn.ark 2> $log
 
 echo "Extracting test set"
 target=test
@@ -40,6 +44,8 @@ compute-mfcc-feats --verbose=2 $options scp:material/$target.wav.scp ark,t,scp:$
 # TODO: 
 #	1. use add-deltas to add delta features to original mfcc feature set
 #	2. use compute-cmvn-stats & apply-cmvn to compute cmvn statistics and apply cmvn with global means and variatnces to previous 39-dim mfcc feature set
+add-deltas --delta-order=2 ark:$path/$target.13.ark ark,t:$path/$target.13.delta.ark
+compute-cmvn-stats ark:$path/$target.13.delta.ark ark:- | apply-cmvn ark:- ark:$path/$target.13.delta.ark ark:$path/$target.39.cmvn.ark 2> $log
 
 #
 
