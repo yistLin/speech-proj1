@@ -17,6 +17,7 @@ totgauss=1000                                 # Target #Gaussians.
 incgauss=$[($totgauss-$numgauss)/$maxiterinc] # per-iter increment for #Gauss
 realign_iters="1 2 3 4 5 6 7 8 9 10 12 14 16 18 20 23 26 29 32 35 38";
 scale_opts="--transition-scale=1.0 --acoustic-scale=0.1 --self-loop-scale=0.1"
+beam=6
 
 mkdir -p $dir
 mkdir -p $dir/log
@@ -90,6 +91,59 @@ else
 fi
 
 # TODO: complete the iterative training part
+for (( iter=1; $iter<=$numiters; iter=$iter+1 ))
+do
+    x=`printf "%02g" $iter`
+    y=`printf "%02g" $[$iter+1]`
+
+    echo "Iteration $x :"
+
+    if [ $iter -eq 1 ]; then
+        beam=6
+    else
+        beam=10
+    fi
+
+    if echo $realign_iters | grep -w $iter > /dev/null; then
+        echo "    realigning training graphs equally"
+        if [ ! -f $dir/log/done.$x.ali ] || [ ! -f $dir/$x.ali ]; then
+            log=$dir/log/align.$x.log
+            echo "        output -> $dir/$x.ali"
+            echo "        log -> $log"
+            gmm-align-compiled $scale_opts --beam=$beam --retry-beam=$[$beam*4] $dir/$x.mdl ark:$dir/train.graph "ark,s,cs:$feat" \
+                ark:$dir/$x.ali 2> $log
+            touch $dir/log/done.$x.ali
+        else
+            echo "        $dir/$x.ali exists , skipping ..."
+        fi
+        ln -sf $x.ali $dir/train.ali
+    fi
+
+    echo "    accumulating GMM statistics"
+    if [ ! -f $dir/$x.acc ]; then
+        log=$dir/log/acc.$x.log
+        echo "        output -> $dir/$x.acc"
+        echo "        log -> $log"
+        gmm-acc-stats-ali --binary=false $dir/$x.mdl "ark,s,cs:$feat" \
+            ark:$dir/train.ali $dir/$x.acc 2> $log
+    else
+        echo "        $dir/$x.acc exists , skipping ..."
+    fi
+
+    echo "    updating GMM parameters and splitting to [ $numgauss ] gaussians"
+    if [ ! -f $dir/$y.mdl ]; then
+        log=$dir/log/update.$x.log
+        echo "        output -> $dir/$y.mdl"
+        echo "        log -> $log"
+        if [ $iter -le $maxiterinc ]; then
+            numgauss=$[$numgauss+$incgauss]
+        fi
+        gmm-est --binary=false --write-occs=$dir/$y.occs --min-gaussian-occupancy=3 --mix-up=$numgauss \
+            $dir/$x.mdl $dir/$x.acc $dir/$y.mdl 2> $log
+    else
+        echo "        $dir/$y.mdl exists , skipping ..."
+    fi
+done
 
 echo "Training completed:"
 echo "     mdl = $dir/final.mdl"
@@ -105,6 +159,7 @@ ali=`readlink $dir/train.ali`
 rm -f $dir/train.ali
 cp -f $dir/$ali $dir/train.ali
 rm -f $dir/00.*
+rm -f $dir/log/done.*.ali
 iter=1
 while [ $iter -le $numiters ]; do
   x=`printf "%02g" $iter`
