@@ -83,6 +83,54 @@ else
 fi
 
 # TODO: complete the iterative training part
+for ((iter=1; $iter<$numiters; iter=$iter+1))
+do
+    x=`printf "%02g" $iter`
+    y=`printf "%02g" $[$iter+1]`
+    
+    echo "Iteration $x :"
+
+    if echo $realign_iters | grep -w $iter > /dev/null; then
+        echo "    realigning training graphs equally"
+        if [ ! -f $dir/log/done.$x.ali ] || [ ! -f $dir/$x.ali ]; then
+            log=$dir/log/align.$x.log
+            echo "        output -> $dir/$x.ali"
+            echo "        log -> $log"
+            gmm-align-compiled $scale_opts $dir/$x.mdl ark:$dir/train.graph \
+                "ark,s,cs:$feat" ark:$dir/$x.ali 2> $log
+            touch $dir/log/done.$x.ali
+        else
+            echo "        $dir/$x.ali exists , skipping ..."
+        fi
+        ln -sf $x.ali $dir/train.ali
+    fi
+
+    echo "    accumulating GMM statistics"
+    if [ ! -f $dir/$x.acc ]; then
+        log=$dir/log/acc.$x.log
+        echo "        output -> $dir/$x.acc"
+        echo "        log -> $log"
+        gmm-acc-stats-ali --binary=false $dir/$x.mdl "ark,s,cs:$feat" \
+            ark:$dir/train.ali $dir/$x.acc 2> $log
+    else
+        echo "        $dir/$x.acc exists , skipping ..."
+    fi
+
+    echo "    updating GMM parameters and splitting to [ $numgauss ] gaussians"
+    if [ ! -f $dir/$y.mdl ]; then
+        log=$dir/log/update.$x.log
+        echo "        output -> $dir/$y.mdl"
+        echo "        log -> $log"
+        if [ $iter -le $maxiterinc ]; then
+            numgauss=$[$numgauss+$incgauss]
+        fi
+        gmm-est --binary=false --write-occs=$dir/$y.occs --min-gaussian-occupancy=3 \
+            --mix-up=$numgauss $dir/$x.mdl $dir/$x.acc $dir/$y.mdl 2> $log
+    else
+        echo "        $dir/$y.mdl exists , skipping ..."
+    fi
+done
+# last line of TODO
 
 echo "Training completed:"
 echo "     mdl = $dir/final.mdl"
