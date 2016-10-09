@@ -17,8 +17,8 @@ lexicon_adapt=material/lexicon.adapt.txt
 lexicon_decode=material/lexicon.decode.txt
 
 # TODO: try to replace with your language model
-lm=material/lm.arpa.txt
-#lm=exp/lm/lm.arpa.txt
+#lm=material/lm.arpa.txt
+lm=exp/lm/lm.arpa.txt
 
 proto=material/topo.proto
 train_text=material/train.text
