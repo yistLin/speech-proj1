@@ -91,7 +91,7 @@ else
 fi
 
 # TODO: complete the iterative training part
-for (( iter=1; $iter<=$numiters; iter=$iter+1 ))
+for (( iter=1; $iter<$numiters; iter=$iter+1 ))
 do
     x=`printf "%02g" $iter`
     y=`printf "%02g" $[$iter+1]`
