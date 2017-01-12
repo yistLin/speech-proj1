@@ -21,7 +21,8 @@ realign_iters="10 20 30";
 numiters=35    # Number of iterations of training
 maxiterinc=25  # Last iter to increase #Gauss on.
 numgauss=$num_pdfs
-totgauss=$[$num_pdfs * 5]
+# totgauss=$[$num_pdfs * 5]
+totgauss=$[$num_pdfs * 7]
 incgauss=$[($totgauss-$numgauss)/$maxiterinc] # per-iter increment for #Gauss
 scale_opts="--transition-scale=1.0 --acoustic-scale=0.1 --self-loop-scale=0.1"
 
@@ -81,7 +82,7 @@ if [ ! -f $dir/train.graph ] || [ ! -f $dir/log/done.graph ]; then
 else
   echo "        $dir/train.graph exists , skipping ..."
 fi
-
+beam=10
 # TODO: complete the iterative training part
 for ((iter=1; $iter<$numiters; iter=$iter+1))
 do
@@ -96,7 +97,9 @@ do
             log=$dir/log/align.$x.log
             echo "        output -> $dir/$x.ali"
             echo "        log -> $log"
-            gmm-align-compiled $scale_opts $dir/$x.mdl ark:$dir/train.graph \
+            gmm-align-compiled $scale_opts --beam=$beam \
+                --retry-beam=$[$beam*4] $dir/$x.mdl \
+                ark:$dir/train.graph \
                 "ark,s,cs:$feat" ark:$dir/$x.ali 2> $log
             touch $dir/log/done.$x.ali
         else
@@ -121,13 +124,14 @@ do
         log=$dir/log/update.$x.log
         echo "        output -> $dir/$y.mdl"
         echo "        log -> $log"
-        if [ $iter -le $maxiterinc ]; then
-            numgauss=$[$numgauss+$incgauss]
-        fi
         gmm-est --binary=false --write-occs=$dir/$y.occs --min-gaussian-occupancy=3 \
             --mix-up=$numgauss $dir/$x.mdl $dir/$x.acc $dir/$y.mdl 2> $log
     else
         echo "        $dir/$y.mdl exists , skipping ..."
+    fi
+    
+    if [ $iter -le $maxiterinc ]; then
+        numgauss=$[$numgauss+$incgauss]
     fi
 done
 # last line of TODO

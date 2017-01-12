@@ -13,7 +13,7 @@ feat=$train_feat_setup
 numiters=40                                   # Number of iterations of training
 maxiterinc=30                                 # Last iter to increase #Gauss on.
 numgauss=300                                  # Initial num-Gauss (must be more than #states=3*phones).
-totgauss=1000                                 # Target #Gaussians.
+totgauss=2000                                 # Target #Gaussians.
 incgauss=$[($totgauss-$numgauss)/$maxiterinc] # per-iter increment for #Gauss
 realign_iters="1 2 3 4 5 6 7 8 9 10 12 14 16 18 20 23 26 29 32 35 38";
 scale_opts="--transition-scale=1.0 --acoustic-scale=0.1 --self-loop-scale=0.1"
@@ -135,13 +135,14 @@ do
         log=$dir/log/update.$x.log
         echo "        output -> $dir/$y.mdl"
         echo "        log -> $log"
-        if [ $iter -le $maxiterinc ]; then
-            numgauss=$[$numgauss+$incgauss]
-        fi
         gmm-est --binary=false --write-occs=$dir/$y.occs --min-gaussian-occupancy=3 --mix-up=$numgauss \
             $dir/$x.mdl $dir/$x.acc $dir/$y.mdl 2> $log
     else
         echo "        $dir/$y.mdl exists , skipping ..."
+    fi
+    
+    if [ $iter -le $maxiterinc ]; then
+        numgauss=$[$numgauss+$incgauss]
     fi
 done
 
